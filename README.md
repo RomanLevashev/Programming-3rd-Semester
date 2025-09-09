@@ -4,22 +4,16 @@ Repository for programming assignments in the 3rd semester. All projects are bui
 
 ## Build and Run
 
-**Build and run immediately:**
-```bash
-dotnet build && dotnet run <PATH_TO_SOLUTION>
-```
 
-**Or as separate commands:**
 ```bash
 # Build first
-dotnet build
+dotnet build <PATH_TO_SOLUTION>
 
 # Then run
-dotnet run --project <PATH_TO_SOLUTION>
+dotnet run --project <PATH_TO_PROJECT>
 ```
 
 **For specific configuration:**
 ```bash
-dotnet build --configuration Release && dotnet run <PATH_TO_SOLUTION>
-
+dotnet build --configuration Release
 ```
