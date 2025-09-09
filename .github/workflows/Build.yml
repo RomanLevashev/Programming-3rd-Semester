@@ -1,0 +1,27 @@
+name: Build
+on: [push, pull_request]
+jobs:
+  build-ubuntu:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '9.x'
+      - name: Build
+        run: find . -name "*.sln" -exec dotnet build {} \;
+      - name: Run tests
+        run: find . -name "*.sln" -exec dotnet test {} \;
+
+  build-windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '9.x'
+      - name: Build
+        run: Get-ChildItem -Recurse -Filter *.sln | ForEach-Object { dotnet build $_.FullName }
+      - name: Run tests
+        run: Get-ChildItem -Recurse -Filter *.sln | ForEach-Object { dotnet test $_.FullName }
+
