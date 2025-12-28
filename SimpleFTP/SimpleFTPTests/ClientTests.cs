@@ -6,6 +6,8 @@
 namespace SimpleFTPTests.ClientTests;
 
 using System.IO;
+using System.Net;
+using System.Net.Sockets;
 using System.Threading;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using SimpleFTPClient;
@@ -17,16 +19,14 @@ using SimpleFTPServer;
 [TestClass]
 public class ClientTests
 {
-    private static readonly object PortLock = new();
-    private static int portCounter = 6000;
 #pragma warning disable CS8618
     private Server server;
     private Client client;
     private CancellationTokenSource cts;
+    private Task serverTask = null!;
 #pragma warning restore CS8618
     private int port;
-
-    private static string TestDirectory => GlobalTestSetup.GlobalTestDirectory;
+    private string testDirectory = null!;
 
     /// <summary>
     /// Initializes the test environment before each test method execution.
@@ -36,44 +36,35 @@ public class ClientTests
     public async Task TestInitialize()
     {
         this.cts = new CancellationTokenSource();
+        this.testDirectory = GlobalTestSetup.CreateTestDirectory();
 
-        lock (PortLock)
-        {
-            this.port = portCounter++;
-            if (portCounter > 65000)
-            {
-                portCounter = 6000;
-            }
-        }
+        this.port = GetFreePort();
 
-        var originalDir = Directory.GetCurrentDirectory();
-        try
-        {
-            Directory.SetCurrentDirectory(TestDirectory);
+        this.server = new Server(this.port);
+        this.serverTask = this.server.Start();
 
-            this.server = new Server(this.port);
-            _ = this.server.Start();
+        await Task.Delay(200);
 
-            await Task.Delay(200);
-
-            this.client = new Client("localhost", this.port);
-            await this.client.ConnectAsync(this.cts.Token);
-        }
-        finally
-        {
-            Directory.SetCurrentDirectory(originalDir);
-        }
+        this.client = new Client("localhost", this.port);
+        await this.client.ConnectAsync(this.cts.Token);
     }
 
     /// <summary>
     /// Cleans up test resources after each test method execution.
     /// </summary>
     [TestCleanup]
-    public void TestCleanup()
+    public async Task TestCleanup()
     {
         this.cts?.Cancel();
         this.client?.Dispose();
         this.server?.Dispose();
+
+        if (this.serverTask is not null)
+        {
+            await this.serverTask;
+        }
+
+        GlobalTestSetup.CleanupTestDirectory(this.testDirectory);
     }
 
     /// <summary>
@@ -93,7 +84,7 @@ public class ClientTests
     [TestMethod]
     public async Task ListAsyncShouldReturnCorrectDirectoryStructure()
     {
-        var (success, entries) = await this.client.ListAsync(TestDirectory, this.cts.Token);
+        var (success, entries) = await this.client.ListAsync(this.testDirectory, this.cts.Token);
 
         Assert.IsTrue(success);
         Assert.IsNotNull(entries);
@@ -116,7 +107,7 @@ public class ClientTests
     [TestMethod]
     public async Task ListAsyncWithNestedDirectoryShouldReturnSingleFile()
     {
-        var subDirPath = Path.Combine(TestDirectory, "subdir1");
+        var subDirPath = Path.Combine(this.testDirectory, "subdir1");
 
         var (success, entries) = await this.client.ListAsync(subDirPath, this.cts.Token);
 
@@ -134,7 +125,7 @@ public class ClientTests
     [TestMethod]
     public async Task ListAsyncWithEmptyDirectoryShouldReturnEmptyList()
     {
-        var emptyDirPath = Path.Combine(TestDirectory, "empty_dir");
+        var emptyDirPath = Path.Combine(this.testDirectory, "empty_dir");
 
         var (success, entries) = await this.client.ListAsync(emptyDirPath, this.cts.Token);
 
@@ -150,7 +141,7 @@ public class ClientTests
     [TestMethod]
     public async Task ListAsyncWithNonexistentDirectoryShouldFail()
     {
-        var invalidPath = Path.Combine(TestDirectory, "nonexistent");
+        var invalidPath = Path.Combine(this.testDirectory, "nonexistent");
 
         var (success, entries) = await this.client.ListAsync(invalidPath, this.cts.Token);
 
@@ -165,7 +156,7 @@ public class ClientTests
     [TestMethod]
     public async Task ListAsyncWithFilePathShouldFail()
     {
-        var filePath = Path.Combine(TestDirectory, "file1.txt");
+        var filePath = Path.Combine(this.testDirectory, "file1.txt");
 
         var (success, entries) = await this.client.ListAsync(filePath, this.cts.Token);
 
@@ -180,7 +171,7 @@ public class ClientTests
     [TestMethod]
     public async Task GetAsyncShouldDownloadFileWithCorrectContent()
     {
-        var remotePath = Path.Combine(TestDirectory, "file1.txt");
+        var remotePath = Path.Combine(this.testDirectory, "file1.txt");
         var localPath = Path.GetTempFileName();
 
         try
@@ -211,7 +202,7 @@ public class ClientTests
     [TestMethod]
     public async Task GetAsyncShouldDownloadNestedFile()
     {
-        var remotePath = Path.Combine(TestDirectory, "subdir1", "nested1.txt");
+        var remotePath = Path.Combine(this.testDirectory, "subdir1", "nested1.txt");
         var localPath = Path.GetTempFileName();
 
         try
@@ -239,7 +230,7 @@ public class ClientTests
     [TestMethod]
     public async Task GetAsyncWithNonexistentFileShouldFail()
     {
-        var remotePath = Path.Combine(TestDirectory, "nonexistent2.txt");
+        var remotePath = Path.Combine(this.testDirectory, "nonexistent2.txt");
         var localPath = Path.GetTempFileName();
 
         try
@@ -283,12 +274,21 @@ public class ClientTests
         {
             tasks[i] = Task.Run(async () =>
             {
-                var (success, entries) = await this.client.ListAsync(TestDirectory, this.cts.Token);
+                var (success, entries) = await this.client.ListAsync(this.testDirectory, this.cts.Token);
                 Assert.IsTrue(success);
                 Assert.IsNotNull(entries);
             });
         }
 
         await Task.WhenAll(tasks);
+    }
+
+    private static int GetFreePort()
+    {
+        using var listener = new TcpListener(IPAddress.Loopback, 0);
+        listener.Start();
+        int freePort = ((IPEndPoint)listener.LocalEndpoint).Port;
+        listener.Stop();
+        return freePort;
     }
 }

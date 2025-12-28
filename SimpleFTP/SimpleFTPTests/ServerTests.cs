@@ -1,4 +1,4 @@
-﻿// <copyright file="ServerTests.cs" company="Roman Levashev">
+// <copyright file="ServerTests.cs" company="Roman Levashev">
 // Copyright (c) Roman Levashev. All rights reserved.
 // Licensed under the MIT License.
 // </copyright>
@@ -7,7 +7,6 @@ namespace SimpleFTPTests.ServerTests;
 
 using System.IO;
 using System.Text;
-using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using SimpleFTPServer;
@@ -19,20 +18,30 @@ using SimpleFTPServer;
 [TestClass]
 public class ServerTests
 {
-    private static Server server = null!;
-
-    private static string TestDirectory => GlobalTestSetup.GlobalTestDirectory;
+    private static readonly SemaphoreSlim CurrentDirectoryLock = new(1, 1);
+#pragma warning disable CS8618
+    private Server server;
+    private string testDirectory;
+#pragma warning restore CS8618
 
     /// <summary>
-    /// Initializes the test environment before all tests in the class execute.
-    /// Creates a server instance for testing.
+    /// Initializes an isolated server instance and file structure before each test.
     /// </summary>
-    /// <param name="context">Test context providing information about the test run.</param>
-    /// <returns>A task that represents the asynchronous test operation.</returns>
-    [ClassInitialize]
-    public static async Task ClassInitialize(TestContext context)
+    [TestInitialize]
+    public void TestInitialize()
     {
-        server = new Server();
+        this.server = new Server();
+        this.testDirectory = GlobalTestSetup.CreateTestDirectory();
+    }
+
+    /// <summary>
+    /// Cleans up resources created for each test.
+    /// </summary>
+    [TestCleanup]
+    public void TestCleanup()
+    {
+        this.server.Dispose();
+        GlobalTestSetup.CleanupTestDirectory(this.testDirectory);
     }
 
     /// <summary>
@@ -58,7 +67,7 @@ public class ServerTests
             "HandleListRequest",
             System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
 
-        await (Task)method!.Invoke(server, [TestDirectory, responseStream])!;
+        await (Task)method!.Invoke(this.server, [this.testDirectory, responseStream])!;
 
         responseStream.Position = 0;
         var response = Encoding.UTF8.GetString(responseStream.ToArray());
@@ -78,15 +87,14 @@ public class ServerTests
     [TestMethod]
     public async Task Server_HandleListRequest_WithNonExistentDirectory_ShouldReturnMinusOne()
     {
-        using var cts = new CancellationTokenSource();
         var responseStream = new MemoryStream();
 
         var method = typeof(Server).GetMethod(
             "HandleListRequest",
             System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
 
-        await (Task)method!.Invoke(server, [
-            Path.Combine(TestDirectory, "non_existent"),
+        await (Task)method!.Invoke(this.server, [
+            Path.Combine(this.testDirectory, "non_existent"),
             responseStream
         ])!;
 
@@ -102,7 +110,7 @@ public class ServerTests
     [TestMethod]
     public async Task Server_HandleGetRequest_WithExistingFile_ShouldSendFileContent()
     {
-        var testFilePath = Path.Combine(TestDirectory, "file1.txt");
+        var testFilePath = Path.Combine(this.testDirectory, "file1.txt");
         var fileContent = "This is test file 1 content";
         File.WriteAllText(testFilePath, fileContent);
 
@@ -112,7 +120,7 @@ public class ServerTests
             "HandleGetRequest",
             System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
 
-        await (Task)method!.Invoke(server, [testFilePath, responseStream])!;
+        await (Task)method!.Invoke(this.server, [testFilePath, responseStream])!;
 
         responseStream.Position = 0;
 
@@ -146,8 +154,8 @@ public class ServerTests
             "HandleGetRequest",
             System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
 
-        await (Task)method!.Invoke(server, [
-            Path.Combine(TestDirectory, "non_existent1.txt"),
+        await (Task)method!.Invoke(this.server, [
+            Path.Combine(this.testDirectory, "non_existent1.txt"),
             responseStream,
         ])!;
 
@@ -163,11 +171,12 @@ public class ServerTests
     [TestMethod]
     public async Task Server_ProcessCommand_Command3_ShouldReturnCurrentDirectory()
     {
+        await CurrentDirectoryLock.WaitAsync();
         var originalDirectory = Directory.GetCurrentDirectory();
 
         try
         {
-            Directory.SetCurrentDirectory(TestDirectory);
+            Directory.SetCurrentDirectory(this.testDirectory);
 
             var responseStream = new MemoryStream();
 
@@ -175,15 +184,16 @@ public class ServerTests
                 "ProcessCommand",
                 System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
 
-            await (Task)method!.Invoke(server, ["3 .", responseStream])!;
+            await (Task)method!.Invoke(this.server, ["3 .", responseStream])!;
 
             responseStream.Position = 0;
             var response = Encoding.UTF8.GetString(responseStream.ToArray());
-            Assert.AreEqual(TestDirectory + "\n", response);
+            Assert.AreEqual(this.testDirectory + "\n", response);
         }
         finally
         {
             Directory.SetCurrentDirectory(originalDirectory);
+            CurrentDirectoryLock.Release();
         }
     }
 
@@ -200,7 +210,7 @@ public class ServerTests
             "ProcessCommand",
             System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
 
-        await (Task)method!.Invoke(server, ["invalid command", responseStream])!;
+        await (Task)method!.Invoke(this.server, ["invalid command", responseStream])!;
 
         responseStream.Position = 0;
         var response = Encoding.UTF8.GetString(responseStream.ToArray());
@@ -220,7 +230,7 @@ public class ServerTests
             "ProcessCommand",
             System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
 
-        await (Task)method!.Invoke(server, ["5 somepath", responseStream])!;
+        await (Task)method!.Invoke(this.server, ["5 somepath", responseStream])!;
 
         responseStream.Position = 0;
         var response = Encoding.UTF8.GetString(responseStream.ToArray());

@@ -5,47 +5,83 @@
 
 namespace SimpleFTPTests;
 
+using System.Threading;
+
 /// <summary>
-/// Provides global setup and cleanup for all tests in the assembly.
-/// Creates and manages a temporary directory with test files for FTP testing.
+/// Provides helpers to create and clean isolated test directories for FTP scenarios.
+/// Each test should call creation/cleanup to avoid cross-test interference under parallel runs.
 /// </summary>
-[TestClass]
-public class GlobalTestSetup
+public static class GlobalTestSetup
 {
     /// <summary>
-    /// Gets the global test directory path created for all tests.
+    /// Creates a unique temporary directory with the default test file structure.
     /// </summary>
-    public static string GlobalTestDirectory { get; private set; } = null!;
-
-    /// <summary>
-    /// Initializes the test environment before all tests in the assembly execute.
-    /// Creates a unique temporary directory with test file structure.
-    /// </summary>
-    /// <param name="context">Test context providing information about the test run.</param>
-    [AssemblyInitialize]
-    public static void AssemblyInitialize(TestContext context)
+    /// <returns>The full path to the created test directory.</returns>
+    public static string CreateTestDirectory()
     {
-        GlobalTestDirectory = Path.Combine(
+        string testDirectory = Path.Combine(
             Path.GetTempPath(),
-            $"FtpGlobalTest_{Guid.NewGuid()}");
+            $"FtpTest_{Guid.NewGuid()}");
 
-        Directory.CreateDirectory(GlobalTestDirectory);
-
-        CreateGlobalTestStructure();
-
-        context.Properties["GlobalTestDirectory"] = GlobalTestDirectory;
+        Directory.CreateDirectory(testDirectory);
+        CreateTestStructure(testDirectory);
+        return testDirectory;
     }
 
     /// <summary>
-    /// Cleans up the test environment after all tests in the assembly complete.
-    /// Deletes the temporary directory and all its contents.
+    /// Deletes a test directory and all its contents with retries to tolerate lingering handles.
     /// </summary>
-    [AssemblyCleanup]
-    public static void AssemblyCleanup()
+    /// <param name="directory">The directory to delete.</param>
+    public static void CleanupTestDirectory(string directory)
     {
-        if (Directory.Exists(GlobalTestDirectory))
+        if (string.IsNullOrWhiteSpace(directory) || !Directory.Exists(directory))
         {
-            Directory.Delete(GlobalTestDirectory, recursive: true);
+            return;
+        }
+
+        const int maxAttempts = 10;
+        for (int attempt = 1; attempt <= maxAttempts; attempt++)
+        {
+            try
+            {
+                Directory.Delete(directory, recursive: true);
+                return;
+            }
+            catch (IOException)
+            {
+                GC.Collect();
+                GC.WaitForPendingFinalizers();
+                if (attempt == maxAttempts)
+                {
+                    break;
+                }
+
+                Thread.Sleep(200);
+            }
+            catch (UnauthorizedAccessException)
+            {
+                GC.Collect();
+                GC.WaitForPendingFinalizers();
+                if (attempt == maxAttempts)
+                {
+                    break;
+                }
+
+                Thread.Sleep(200);
+            }
+        }
+
+        try
+        {
+            GC.Collect();
+            GC.WaitForPendingFinalizers();
+            Directory.Delete(directory, recursive: true);
+        }
+        catch (IOException)
+        {
+        }
+        catch (UnauthorizedAccessException)
+        {
         }
     }
 
@@ -53,29 +89,30 @@ public class GlobalTestSetup
     /// Creates the directory and file structure for FTP testing.
     /// Includes text files, nested directories, and empty directories.
     /// </summary>
-    private static void CreateGlobalTestStructure()
+    /// <param name="rootDirectory">The root directory to populate.</param>
+    private static void CreateTestStructure(string rootDirectory)
     {
         File.WriteAllText(
-            Path.Combine(GlobalTestDirectory, "file1.txt"),
+            Path.Combine(rootDirectory, "file1.txt"),
             "This is test file 1 content");
 
         File.WriteAllText(
-            Path.Combine(GlobalTestDirectory, "file2.txt"),
+            Path.Combine(rootDirectory, "file2.txt"),
             "This is test file 2 with longer content");
 
-        var subDir1 = Path.Combine(GlobalTestDirectory, "subdir1");
+        var subDir1 = Path.Combine(rootDirectory, "subdir1");
         Directory.CreateDirectory(subDir1);
         File.WriteAllText(
             Path.Combine(subDir1, "nested1.txt"),
             "Nested file 1");
 
-        var subDir2 = Path.Combine(GlobalTestDirectory, "subdir2");
+        var subDir2 = Path.Combine(rootDirectory, "subdir2");
         Directory.CreateDirectory(subDir2);
         File.WriteAllText(
             Path.Combine(subDir2, "nested2.txt"),
             "Nested file 2");
 
         Directory.CreateDirectory(
-            Path.Combine(GlobalTestDirectory, "empty_dir"));
+            Path.Combine(rootDirectory, "empty_dir"));
     }
 }

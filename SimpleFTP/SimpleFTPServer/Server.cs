@@ -91,9 +91,12 @@ public class Server : IDisposable
         }
 
         this.cts.Cancel();
-        this.listener!.Stop();
+        if (this.listener is not null)
+        {
+            this.listener.Stop();
+            this.listener.Dispose();
+        }
         this.cts.Dispose();
-        this.listener.Dispose();
         GC.SuppressFinalize(this);
         this.disposed = true;
     }
