@@ -1,6 +1,6 @@
 ﻿// <copyright file="Program.cs" company="Roman Levashev">
-// Copyright (c) Roman Levashev. Все права защищены.
-// Лицензировано по MIT.
+// Copyright (c) Roman Levashev. All rights reserved.
+// Licensed under the MIT License.
 // </copyright>
 
 using System.Diagnostics;
