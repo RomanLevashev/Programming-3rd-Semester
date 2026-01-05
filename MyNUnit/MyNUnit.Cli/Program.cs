@@ -1,6 +1,6 @@
-// <copyright file="Program.cs" company="Roman Levashev">
-// Copyright (c) Roman Levashev. All rights reserved.
-// Licensed under the MIT License.
+﻿// <copyright file="Program.cs" company="Roman Levashev">
+// Copyright (c) Roman Levashev. Все права защищены.
+// Лицензировано по MIT.
 // </copyright>
 
 using System.Diagnostics;
@@ -9,19 +9,19 @@ using MyNUnit.Core;
 
 if (args.Length == 0)
 {
-    Console.WriteLine("Using: MyNUnit.Cli <path to the folder with test assemblies>");
+    Console.WriteLine("Использование: MyNUnit.Cli <путь к папке с тестовыми сборками>");
     return 1;
 }
 
 var rootPath = Path.GetFullPath(args[0]);
 if (!Directory.Exists(rootPath))
 {
-    Console.WriteLine($"Path '{rootPath}' does not exist");
+    Console.WriteLine($"Путь \"{rootPath}\" не существует");
     return 1;
 }
 
 var runner = new TestRunner();
-Console.WriteLine($"Running tests in '{rootPath}'...");
+Console.WriteLine($"Запуск тестов в \"{rootPath}\"...");
 
 var stopwatch = Stopwatch.StartNew();
 TestRunResult runResult;
@@ -32,7 +32,7 @@ try
 }
 catch (Exception ex)
 {
-    Console.WriteLine($"Failed to execute: {ex}");
+    Console.WriteLine($"Не удалось выполнить: {ex}");
     return 1;
 }
 
@@ -61,8 +61,8 @@ foreach (var test in ordered)
     var details = test.Status switch
     {
         TestStatus.Passed => string.Empty,
-        TestStatus.Ignored => $" — причина: {test.Details}",
-        TestStatus.Failed => $" — ошибка: {test.Details}",
+        TestStatus.Ignored => $" - причина: {test.Details}",
+        TestStatus.Failed => $" - ошибка: {test.Details}",
         _ => string.Empty,
     };
 
@@ -70,7 +70,7 @@ foreach (var test in ordered)
 }
 
 Console.WriteLine();
-Console.WriteLine($"Итого: всего {runResult.Tests.Count}, прошло {runResult.Passed}, упало {runResult.Failed}, отключено {runResult.Ignored}");
-Console.WriteLine($"Суммарное время тестов: {runResult.TotalDuration.TotalMilliseconds:F1} мс, время запуска: {stopwatch.Elapsed.TotalMilliseconds:F1} мс");
+Console.WriteLine($"Итоги: всего {runResult.Tests.Count}, успешных {runResult.Passed}, упавших {runResult.Failed}, пропущенных {runResult.Ignored}");
+Console.WriteLine($"Общее время тестов: {runResult.TotalDuration.TotalMilliseconds:F1} мс, время запуска: {stopwatch.Elapsed.TotalMilliseconds:F1} мс");
 
 return runResult.Failed == 0 ? 0 : 1;
