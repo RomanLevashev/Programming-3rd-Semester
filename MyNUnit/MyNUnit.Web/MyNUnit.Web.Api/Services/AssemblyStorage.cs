@@ -1,6 +1,11 @@
-using MyNUnit.Web.Api.Persistence.Entities;
+// <copyright file="AssemblyStorage.cs" company="Roman Levashev">
+// Copyright (c) Roman Levashev. All rights reserved.
+// Licensed under the MIT License.
+// </copyright>
 
 namespace MyNUnit.Web.Api.Services;
+
+using MyNUnit.Web.Api.Persistence.Entities;
 
 /// <summary>
 /// Stores uploaded assemblies on disk and provides metadata.

@@ -1,11 +1,16 @@
+// <copyright file="ApiEndpoints.cs" company="Roman Levashev">
+// Copyright (c) Roman Levashev. All rights reserved.
+// Licensed under the MIT License.
+// </copyright>
+
+namespace MyNUnit.Web.Api.Endpoints;
+
 using Microsoft.EntityFrameworkCore;
 using MyNUnit.Web.Api.Contracts;
 using MyNUnit.Web.Api.Extensions;
 using MyNUnit.Web.Api.Persistence;
 using MyNUnit.Web.Api.Persistence.Entities;
 using MyNUnit.Web.Api.Services;
-
-namespace MyNUnit.Web.Api.Endpoints;
 
 /// <summary>
 /// Defines API endpoint mappings for the application.

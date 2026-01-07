@@ -1,10 +1,15 @@
+// <copyright file="TestExecutionService.cs" company="Roman Levashev">
+// Copyright (c) Roman Levashev. All rights reserved.
+// Licensed under the MIT License.
+// </copyright>
+
+namespace MyNUnit.Web.Api.Services;
+
 using System.Diagnostics;
 using Microsoft.EntityFrameworkCore;
 using MyNUnit.Core;
 using MyNUnit.Web.Api.Persistence;
 using MyNUnit.Web.Api.Persistence.Entities;
-
-namespace MyNUnit.Web.Api.Services;
 
 /// <summary>
 /// Executes tests using <see cref="TestRunner"/> and persists results.
@@ -118,7 +123,7 @@ public sealed class TestExecutionService
         return entity;
     }
 
-    private static (int passed, int failed, int ignored) Summarize(IEnumerable<TestResult> tests)
+    private static (int Passed, int Failed, int Ignored) Summarize(IEnumerable<TestResult> tests)
     {
         var passed = 0;
         var failed = 0;

@@ -1,8 +1,13 @@
+// <copyright file="AppDbContext.cs" company="Roman Levashev">
+// Copyright (c) Roman Levashev. All rights reserved.
+// Licensed under the MIT License.
+// </copyright>
+
+namespace MyNUnit.Web.Api.Persistence;
+
 using Microsoft.EntityFrameworkCore;
 using MyNUnit.Core;
 using MyNUnit.Web.Api.Persistence.Entities;
-
-namespace MyNUnit.Web.Api.Persistence;
 
 /// <summary>
 /// EF Core database context for MyNUnit web data.

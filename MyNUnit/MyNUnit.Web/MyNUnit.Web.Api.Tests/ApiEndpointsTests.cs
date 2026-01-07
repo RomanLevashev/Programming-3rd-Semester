@@ -116,7 +116,6 @@ public sealed class ApiWebApplicationFactory : WebApplicationFactory<Program>
             {
                 if (Directory.Exists(this.contentRoot))
                 {
-                    Directory.Delete(this.contentRoot, true);
                 }
             }
             catch

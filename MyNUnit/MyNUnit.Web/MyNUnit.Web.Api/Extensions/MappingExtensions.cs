@@ -1,7 +1,12 @@
-using MyNUnit.Web.Api.Contracts;
-using MyNUnit.Web.Api.Persistence.Entities;
+// <copyright file="MappingExtensions.cs" company="Roman Levashev">
+// Copyright (c) Roman Levashev. All rights reserved.
+// Licensed under the MIT License.
+// </copyright>
 
 namespace MyNUnit.Web.Api.Extensions;
+
+using MyNUnit.Web.Api.Contracts;
+using MyNUnit.Web.Api.Persistence.Entities;
 
 /// <summary>
 /// Maps persistence entities to API DTOs.

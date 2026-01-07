@@ -1,3 +1,8 @@
+// <copyright file="AssemblyRunDto.cs" company="Roman Levashev">
+// Copyright (c) Roman Levashev. All rights reserved.
+// Licensed under the MIT License.
+// </copyright>
+
 namespace MyNUnit.Web.Api.Contracts;
 
 /// <summary>
