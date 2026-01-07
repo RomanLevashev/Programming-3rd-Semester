@@ -4,7 +4,6 @@
 // </copyright>
 
 using System.Diagnostics;
-using System.Linq;
 using MyNUnit.Core;
 
 if (args.Length == 0)
